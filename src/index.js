@@ -6,10 +6,16 @@ import { runDigest, runWatch, hasMatchSoon } from './watcher.js';
 import { drainUpdates, pollUpdates, whoAmI } from './telegram.js';
 
 /**
- * Modos:
- *   digest  — checa se tem jogo hoje e avisa. Roda 1x/dia.
- *   watch   — se tem jogo agora, acompanha em loop ate acabar. Sai na hora se nao tem.
- *   daemon  — fica rodando pra sempre (pra quem roda em servidor proprio).
+ * Modos (cada um e um workflow diferente):
+ *
+ *   digest   — checa se tem jogo hoje e avisa. 1x/dia.        grava state.json
+ *   watch    — acompanha o jogo em loop ate acabar.           grava state.json
+ *   commands — responde os comandos do Telegram. A cada 5min. grava session.json
+ *   daemon   — tudo junto, pra rodar em servidor proprio.
+ *
+ * Comandos ficam SO no modo `commands`: se o modo `watch` tambem os
+ * respondesse, os dois gravariam o mesmo arquivo durante um jogo e o conflito
+ * de merge faria o bot perder o registro e repetir os gols.
  */
 const MODO = process.argv[2] ?? 'daemon';
 
@@ -50,20 +56,22 @@ async function main() {
 
   switch (MODO) {
     case 'digest': {
-      await processarComandos();
       await runDigest();
       sent.prune();
       break;
     }
 
     case 'watch': {
-      await processarComandos();
-
       if (!(await hasMatchSoon())) {
         console.log('Nenhum jogo agora. Encerrando sem gastar minutos.');
         break;
       }
       await runWatch();
+      break;
+    }
+
+    case 'commands': {
+      await processarComandos();
       break;
     }
 
@@ -76,7 +84,7 @@ async function main() {
     }
 
     default:
-      console.error(`Modo desconhecido: "${MODO}". Use digest, watch ou daemon.`);
+      console.error(`Modo desconhecido: "${MODO}". Use digest, watch, commands ou daemon.`);
       process.exit(1);
   }
 

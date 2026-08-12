@@ -1,7 +1,7 @@
 import { config } from './config.js';
 import { getTodayMatches, getSummary, getNextMatch, localDate } from './espn.js';
 import { findGoalClip, findHighlights } from './clips.js';
-import { sent, settings, tracking, flush } from './store.js';
+import { sent, tracking, flush } from './store.js';
 import * as fmt from './format.js';
 import { sendText, sendVideo } from './telegram.js';
 
@@ -113,13 +113,11 @@ async function pollMatch(fixture) {
   const { events, videos, score } = await getSummary(fixture.league, fixture.id);
   const f = { ...fixture, ...score, espnVideos: videos };
 
-  const baselineKey = `baseline:${f.id}`;
-
   // Se o acompanhamento começou com o jogo em andamento, marca o que já
   // passou como visto — senão chegaria uma enxurrada de avisos atrasados.
-  if (!settings.get(baselineKey)) {
-    settings.set(baselineKey, '1');
-
+  // Fica em state.json (e não em settings) pra que o workflow de jogo não
+  // precise escrever no mesmo arquivo que o de comandos.
+  if (sent.claim(`baseline:${f.id}`)) {
     if ((f.state === 'in' || f.state === 'post') && events.length > 0) {
       for (const ev of events) sent.claim(`event:${f.id}:${ev.id}`);
       await sendText(

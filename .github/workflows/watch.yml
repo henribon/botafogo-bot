@@ -50,10 +50,13 @@ jobs:
         # Roda mesmo se o passo anterior falhar, pra não reenviar avisos.
         if: always()
         run: |
-          if [[ -n "$(git status --porcelain data/)" ]]; then
+          # Só state.json. Durante um jogo o workflow de comandos está
+          # commitando a cada 5 min; mexer no mesmo arquivo daria conflito
+          # de rebase justamente aqui, e os gols sairiam repetidos.
+          if [[ -n "$(git status --porcelain data/state.json)" ]]; then
             git config user.name  "botafogo-bot"
             git config user.email "bot@users.noreply.github.com"
-            git add data/
+            git add data/state.json
             git commit -m "estado: acompanhamento [skip ci]"
             git pull --rebase --autostash
             git push

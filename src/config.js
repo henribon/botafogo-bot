@@ -61,7 +61,10 @@ export const config = {
       return Boolean(this.clientId && this.clientSecret);
     },
   },
+  // Dois arquivos separados de proposito: workflows diferentes gravam cada
+  // um, e arquivos distintos o git mescla sem conflito. Ver src/store.js.
   statePath: process.env.STATE_PATH || join(ROOT, 'data', 'state.json'),
+  sessionPath: process.env.SESSION_PATH || join(ROOT, 'data', 'session.json'),
 };
 
 // ── Botafogo de Futebol e Regatas (RJ) na API da ESPN ──
