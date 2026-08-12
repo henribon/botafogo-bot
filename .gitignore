@@ -1,0 +1,8 @@
+node_modules/
+
+# Token do bot — NUNCA versionar. No GitHub Actions ele vem dos Secrets.
+.env
+
+# ATENÇÃO: data/state.json É versionado de propósito.
+# No GitHub Actions cada execução é uma máquina nova, então é o commit desse
+# arquivo que faz o bot lembrar o que já avisou. Não adicione data/ aqui.

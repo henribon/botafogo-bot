@@ -1,0 +1,17 @@
+{
+  "name": "botafogo-bot",
+  "version": "2.0.0",
+  "description": "Bot de Telegram que avisa dia de jogo do Botafogo e acompanha os gols ao vivo",
+  "type": "module",
+  "main": "src/index.js",
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "scripts": {
+    "start": "node --no-warnings=ExperimentalWarning src/index.js",
+    "check": "node --no-warnings=ExperimentalWarning scripts/check.js",
+    "check:video": "node --no-warnings=ExperimentalWarning scripts/check-video.js"
+  },
+  "dependencies": {},
+  "license": "MIT"
+}
