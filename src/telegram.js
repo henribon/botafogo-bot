@@ -86,8 +86,17 @@ export async function sendText(text) {
   }
 }
 
-/** Manda o video como arquivo. `gifLike` faz clipe curto tocar em loop, sem som. */
-export async function sendVideo(buffer, caption, { fallbackUrl = null, gifLike = false } = {}) {
+/**
+ * Manda o video como arquivo.
+ *
+ * `width` e `height` sao importantes: sem eles o Telegram nao sabe a
+ * proporcao e mostra o clipe achatado, mesmo o arquivo estando correto.
+ */
+export async function sendVideo(
+  buffer,
+  caption,
+  { fallbackUrl = null, gifLike = false, width, height, duration } = {}
+) {
   const chat_id = requireChatId();
 
   const form = new FormData();
@@ -95,6 +104,9 @@ export async function sendVideo(buffer, caption, { fallbackUrl = null, gifLike =
   form.append('caption', caption.slice(0, 1024)); // limite de legenda do Telegram
   form.append('parse_mode', 'Markdown');
   form.append('supports_streaming', 'true');
+  if (width) form.append('width', String(width));
+  if (height) form.append('height', String(height));
+  if (duration) form.append('duration', String(duration));
   form.append('video', new Blob([buffer], { type: 'video/mp4' }), 'lance.mp4');
 
   const ctrl = new AbortController();

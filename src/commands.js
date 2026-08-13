@@ -1,6 +1,6 @@
 import { config } from './config.js';
 import { tracking } from './store.js';
-import { getNextMatch } from './espn.js';
+import { getNextMatch, getSummary } from './espn.js';
 import { todayMatches } from './watcher.js';
 import * as fmt from './format.js';
 import { sendText } from './telegram.js';
@@ -21,6 +21,7 @@ function norm(text) {
 const MATCHERS = [
   { re: /^(hoje|tem jogo|jogo hoje)$/, cmd: 'hoje' },
   { re: /^(proximo|proximo jogo|prox)$/, cmd: 'proximo' },
+  { re: /^(escalacao|escalacoes|escala|time|lineup)$/, cmd: 'escalacao' },
   { re: /^(acompanhar|seguir|ao vivo|ligar)$/, cmd: 'acompanhar' },
   { re: /^(parar|desligar|stop)$/, cmd: 'parar' },
   { re: /^(status|config)$/, cmd: 'status' },
@@ -58,6 +59,21 @@ export async function handleCommand(text) {
     case 'proximo':
       await sendText(fmt.nextMatch(await getNextMatch()));
       return;
+
+    case 'escalacao': {
+      // Jogo de hoje se houver; senão o próximo (aí quase sempre ainda não saiu).
+      const matches = await todayMatches({ maxAgeMs: 0 });
+      const f = matches[0] ?? (await getNextMatch());
+
+      if (!f) {
+        await sendText(fmt.noLineupsYet(null));
+        return;
+      }
+
+      const { lineups } = await getSummary(f.league, f.id);
+      await sendText(fmt.lineups(f, lineups) ?? fmt.noLineupsYet(f));
+      return;
+    }
 
     case 'acompanhar': {
       tracking.set(true);

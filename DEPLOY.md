@@ -92,7 +92,13 @@ Pronto. A partir daqui é automático.
 | Workflow | Quando | O que faz |
 |---|---|---|
 | `daily.yml` | 08:00 (Brasília) | Avisa se tem jogo hoje, com horário e transmissão |
-| `watch.yml` | a cada 20 min, das 13h à 1h | Se achar jogo rolando, acompanha até o fim avisando cada gol |
+| `watch.yml` | a cada 20 min, das 13h à 1h | Se achar jogo, acompanha até o fim: escalação, gols e melhores momentos |
+| `commands.yml` | a cada 5 min | Responde os comandos que você mandar no Telegram |
+
+Cada workflow grava **um arquivo de estado diferente** (`state.json` para os de
+jogo, `session.json` para o de comandos). Isso é de propósito: durante uma
+partida os dois rodam ao mesmo tempo, e se mexessem no mesmo arquivo o conflito
+de merge faria o bot perder o registro e **repetir os avisos de gol**.
 
 ---
 

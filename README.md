@@ -34,6 +34,7 @@ Recopa, Carioca e Mundial de Clubes.
 |---|---|
 | `/hoje` | Tem jogo hoje? |
 | `/proximo` | Próximo jogo com data, hora e transmissão |
+| `/escalacao` | Escalação dos dois times, com formação e banco |
 | `/acompanhar` | Liga os avisos de gol ao vivo |
 | `/parar` | Desliga os avisos de gol |
 | `/status` | Mostra a configuração atual |
@@ -41,6 +42,28 @@ Recopa, Carioca e Mundial de Clubes.
 
 O acompanhamento já vem **ligado** por padrão — os comandos são conveniência,
 não obrigação.
+
+### Limitação dos comandos
+
+Rodando no GitHub Actions, o bot **não fica escutando** — ele lê os comandos
+quando um workflow roda. O `commands.yml` roda a cada 5 min (o mínimo que o
+GitHub aceita) e o cron ainda atrasa, então **a resposta a um comando leva de 5
+a 15 minutos**.
+
+Isso não afeta o que importa: o aviso de dia de jogo e os avisos de gol são
+automáticos e chegam na hora certa. Resposta instantânea a comando exigiria um
+servidor ligado o tempo todo — e todo servidor gratuito pede cartão de crédito.
+
+### O que chega sozinho, sem você pedir
+
+| Quando | O quê |
+|---|---|
+| 08:00 do dia do jogo | Data, horário, estádio e onde vai passar |
+| ~45 min antes do apito | Escalação dos dois times, com formação |
+| No apito inicial | Aviso de que começou |
+| A cada gol | Autor, assistência, minuto, placar e o vídeo do lance |
+| Intervalo e fim de jogo | Placar |
+| Depois do apito final | Melhores momentos em vídeo |
 
 ---
 
@@ -55,6 +78,18 @@ Pra testar a parte de dados sem nem criar o bot:
 
 ```bash
 npm run check
+```
+
+Com o bot já criado, dá pra ver exatamente como as mensagens vão chegar —
+esses dois mandam de verdade no seu Telegram, usando um jogo real já
+encerrado, e **não mexem no estado do bot**:
+
+```bash
+npm run test:gol
+```
+
+```bash
+npm run test:escalacao
 ```
 
 ---

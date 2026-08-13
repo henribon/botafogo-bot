@@ -223,6 +223,29 @@ export async function getSummary(leagueSlug, eventId) {
   const us = competitors.find((c) => String(c.team?.id) === TEAM_ID);
   const them = competitors.find((c) => String(c.team?.id) !== TEAM_ID);
 
+  // Escalacoes: a ESPN publica em geral ~1h antes do apito inicial.
+  // Antes disso o array vem vazio ou sem titulares definidos.
+  const lineups = (data.rosters ?? []).map((r) => {
+    const jogadores = r.roster ?? [];
+    const mapear = (p) => ({
+      name: p.athlete?.displayName ?? '?',
+      jersey: p.jersey ?? null,
+      position: p.position?.abbreviation ?? null,
+      subbedIn: Boolean(p.subbedIn),
+      subbedOut: Boolean(p.subbedOut),
+    });
+
+    return {
+      teamId: String(r.team?.id ?? ''),
+      teamName: r.team?.displayName ?? '?',
+      isUs: String(r.team?.id) === TEAM_ID,
+      isHome: r.homeAway === 'home',
+      formation: r.formation ?? null,
+      starters: jogadores.filter((p) => p.starter).map(mapear),
+      subs: jogadores.filter((p) => !p.starter).map(mapear),
+    };
+  });
+
   const score = {
     homeTeam: home?.team?.displayName ?? home?.team?.name ?? '?',
     awayTeam: away?.team?.displayName ?? away?.team?.name ?? '?',
@@ -234,7 +257,7 @@ export async function getSummary(leagueSlug, eventId) {
     statusName: headerComp.status?.type?.name ?? null,
   };
 
-  return { events, videos, score, raw: data };
+  return { events, videos, score, lineups, raw: data };
 }
 
 export { LEAGUES };

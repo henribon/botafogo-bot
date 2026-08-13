@@ -45,7 +45,9 @@ export const config = {
   timezone: process.env.TZ || 'America/Sao_Paulo',
   digestHour: num('DIGEST_HOUR', 8),
   pollIntervalSeconds: num('POLL_INTERVAL_SECONDS', 90),
-  prematchLeadMinutes: num('PREMATCH_LEAD_MINUTES', 15),
+  // 45 min pra pegar a escalação com antecedência útil: a ESPN publica
+  // cerca de 1h antes do apito.
+  prematchLeadMinutes: num('PREMATCH_LEAD_MINUTES', 45),
   // Ligado por padrao: rodando em rajadas no GitHub Actions, depender de um
   // comando pra ligar o acompanhamento so atrapalharia.
   autoTrack: bool('AUTO_TRACK', true),

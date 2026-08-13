@@ -1,5 +1,5 @@
 import { spawn } from 'node:child_process';
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { config } from './config.js';
@@ -272,14 +272,78 @@ async function downloadHls(masterUrl, durationSec) {
 }
 
 /**
+ * Le largura, altura e duracao do video.
+ *
+ * Sem isso o Telegram nao sabe a proporcao do arquivo e renderiza o clipe
+ * achatado — o video em si esta correto (medido: 1280x720, pixels quadrados),
+ * o que falta e mandar os campos width/height junto.
+ */
+async function probeVideo(buffer) {
+  if (!(await hasFfmpeg())) return null;
+
+  const dir = await mkdtemp(join(tmpdir(), 'botafogo-probe-'));
+  const arquivo = join(dir, 'v.mp4');
+
+  try {
+    await writeFile(arquivo, buffer);
+
+    const saida = await new Promise((resolve) => {
+      const p = spawn('ffprobe', [
+        '-v', 'error',
+        '-select_streams', 'v:0',
+        '-show_entries', 'stream=width,height,display_aspect_ratio:format=duration',
+        '-of', 'json',
+        arquivo,
+      ]);
+
+      let buf = '';
+      p.stdout.on('data', (d) => (buf += d));
+      p.on('error', () => resolve(null));
+      p.on('close', (code) => resolve(code === 0 ? buf : null));
+    });
+
+    if (!saida) return null;
+
+    const json = JSON.parse(saida);
+    const stream = json.streams?.[0];
+    if (!stream?.width || !stream?.height) return null;
+
+    let { width, height } = stream;
+
+    // Se os pixels nao forem quadrados, a largura exibida difere da armazenada.
+    const dar = stream.display_aspect_ratio;
+    if (dar && dar.includes(':')) {
+      const [a, b] = dar.split(':').map(Number);
+      if (a > 0 && b > 0) {
+        const esperada = Math.round((height * a) / b);
+        if (Math.abs(esperada - width) > 2) width = esperada;
+      }
+    }
+
+    return {
+      width,
+      height,
+      duration: Math.round(Number(json.format?.duration ?? 0)) || undefined,
+    };
+  } catch {
+    return null;
+  } finally {
+    await rm(dir, { recursive: true, force: true }).catch(() => {});
+  }
+}
+
+/**
  * Consegue o video de um item da ESPN: tenta o mp4 direto e, se ele for
  * grande demais (costuma ser o master de 30-250MB), cai pro HLS.
+ * Devolve o buffer junto com as dimensoes, que o Telegram precisa.
  */
 async function acquireVideo(v) {
-  const direto = await downloadVideo(v.url);
-  if (direto) return direto;
-  if (v.hlsUrl) return downloadHls(v.hlsUrl, v.duration);
-  return null;
+  let buffer = await downloadVideo(v.url);
+  if (!buffer && v.hlsUrl) buffer = await downloadHls(v.hlsUrl, v.duration);
+  if (!buffer) return null;
+
+  const meta = (await probeVideo(buffer)) ?? {};
+  return { buffer, ...meta };
 }
 
 // ── API publica ──────────────────────────────────────────────
@@ -303,8 +367,17 @@ export async function findGoalClip({ scorer, opponent, espnVideos = [] }) {
       .sort((a, b) => (a.duration || 0) - (b.duration || 0));
 
     for (const v of casam) {
-      const buf = await acquireVideo(v);
-      if (buf) return { video: buf, url: v.webUrl ?? v.url, source: 'espn' };
+      const got = await acquireVideo(v);
+      if (got) {
+        return {
+          video: got.buffer,
+          width: got.width,
+          height: got.height,
+          duration: got.duration,
+          url: v.webUrl ?? v.url,
+          source: 'espn',
+        };
+      }
     }
     if (casam.length > 0) {
       return { video: null, url: casam[0].webUrl ?? casam[0].url, source: 'espn' };
@@ -357,8 +430,17 @@ export async function findHighlights(espnVideos = []) {
   if (candidatos.length === 0) return null;
 
   for (const v of candidatos) {
-    const video = await acquireVideo(v);
-    if (video) return { video, url: v.webUrl ?? v.url, headline: v.headline };
+    const got = await acquireVideo(v);
+    if (got) {
+      return {
+        video: got.buffer,
+        width: got.width,
+        height: got.height,
+        duration: got.duration,
+        url: v.webUrl ?? v.url,
+        headline: v.headline,
+      };
+    }
   }
 
   // Todos grandes demais: manda pelo menos o link.

@@ -144,6 +144,83 @@ export function goal(f, ev, clipUrl = null) {
   return linhas.join('\n');
 }
 
+/** Traduz a sigla de posição da ESPN, que vem em inglês. */
+const POSICOES = {
+  G: 'GOL',
+  GK: 'GOL',
+  D: 'ZAG',
+  ZE: 'ZAG',
+  ZCD: 'ZAG',
+  ZC: 'ZAG',
+  CB: 'ZAG',
+  LB: 'LE',
+  RB: 'LD',
+  M: 'MEI',
+  MD: 'VOL',
+  ME: 'MEI',
+  MA: 'MEI',
+  CM: 'MEI',
+  DM: 'VOL',
+  AM: 'MEI',
+  F: 'ATA',
+  A: 'ATA',
+  ST: 'ATA',
+  W: 'PON',
+};
+
+function posicao(sigla) {
+  if (!sigla || sigla === 'SUB') return null;
+  return POSICOES[sigla] ?? sigla;
+}
+
+function linhaJogador(p) {
+  const num = p.jersey ? `${String(p.jersey).padStart(2, ' ')} ` : '';
+  const pos = posicao(p.position);
+  return `${num}${p.name}${pos ? ` _(${pos})_` : ''}`;
+}
+
+/**
+ * Escalação dos dois times. A ESPN só publica ~1h antes do apito, então
+ * quem chama isso antes disso recebe `null` e trata como "ainda não saiu".
+ */
+export function lineups(f, times) {
+  const comTitulares = (times ?? []).filter((t) => t.starters.length > 0);
+  if (comTitulares.length === 0) return null;
+
+  // Botafogo primeiro; é o que interessa.
+  const ordenado = [...comTitulares].sort((a, b) => Number(b.isUs) - Number(a.isUs));
+  const linhas = ['📋 *ESCALAÇÕES*', '', `⚽ ${f.homeTeam} x ${f.awayTeam}`, `🏆 ${f.leagueLabel}`];
+
+  for (const t of ordenado) {
+    linhas.push('');
+    linhas.push('━━━━━━━━━━━━━━━━━━━');
+    linhas.push(`${t.isUs ? '⚫⚪' : '👥'} *${t.teamName}*${t.formation ? `  ·  ${t.formation}` : ''}`);
+    linhas.push('');
+
+    for (const p of t.starters) linhas.push(linhaJogador(p));
+
+    if (t.subs.length > 0) {
+      linhas.push('');
+      linhas.push(`_Banco:_ ${t.subs.map((p) => p.name).join(', ')}`);
+    }
+  }
+
+  return linhas.join('\n');
+}
+
+/** Resposta ao comando quando a escalação ainda não saiu. */
+export function noLineupsYet(f) {
+  if (!f) return '🤷 Não achei jogo do Botafogo pra mostrar escalação.';
+  return [
+    '📋 A escalação ainda não saiu.',
+    '',
+    `⚽ ${f.homeTeam} x ${f.awayTeam}`,
+    `🕐 ${dayLabel(f.kickoff)} às *${time(f.kickoff)}*`,
+    '',
+    '_A ESPN costuma publicar cerca de 1h antes do apito inicial. Eu te mando assim que sair._',
+  ].join('\n');
+}
+
 export function halftime(f) {
   return `⏸️ *Intervalo*\n\n📊 ${placar(f)}`;
 }
@@ -162,6 +239,7 @@ export function help(trackingOn) {
     'Comandos:',
     '• *HOJE* — tem jogo hoje?',
     '• *PROXIMO* — próximo jogo',
+    '• *ESCALACAO* — escalação dos times',
     '• *ACOMPANHAR* — ligar avisos de gol ao vivo',
     '• *PARAR* — desligar avisos de gol',
     '• *STATUS* — como estou agora',

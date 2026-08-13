@@ -102,7 +102,12 @@ async function announceGoal(f, ev) {
 
   if (clip.video) {
     console.log(`⚽ gol de ${ev.scorer ?? '?'} — com vídeo (${clip.source})`);
-    await sendVideo(clip.video, legenda, { fallbackUrl: clip.url });
+    await sendVideo(clip.video, legenda, {
+      fallbackUrl: clip.url,
+      width: clip.width,
+      height: clip.height,
+      duration: clip.duration,
+    });
   } else {
     console.log(`⚽ gol de ${ev.scorer ?? '?'} — sem vídeo (${clip.source})`);
     await sendText(legenda);
@@ -110,8 +115,20 @@ async function announceGoal(f, ev) {
 }
 
 async function pollMatch(fixture) {
-  const { events, videos, score } = await getSummary(fixture.league, fixture.id);
+  const { events, videos, score, lineups } = await getSummary(fixture.league, fixture.id);
   const f = { ...fixture, ...score, espnVideos: videos };
+
+  // Escalação: a ESPN publica ~1h antes do apito. A chave só é marcada
+  // quando a mensagem sai de fato, então as checagens seguintes continuam
+  // tentando até os titulares aparecerem.
+  if (!sent.has(`lineups:${f.id}`)) {
+    const texto = fmt.lineups(f, lineups);
+    if (texto && sent.claim(`lineups:${f.id}`)) {
+      console.log('📋 enviando escalações');
+      await sendText(texto);
+      flush();
+    }
+  }
 
   // Se o acompanhamento começou com o jogo em andamento, marca o que já
   // passou como visto — senão chegaria uma enxurrada de avisos atrasados.
@@ -159,6 +176,9 @@ async function pollMatch(fixture) {
         console.log(`🎥 enviando melhores momentos: ${hl.headline}`);
         await sendVideo(hl.video, `🎥 *Melhores momentos*\n\n_${hl.headline}_`, {
           fallbackUrl: hl.url,
+          width: hl.width,
+          height: hl.height,
+          duration: hl.duration,
         });
       }
     }

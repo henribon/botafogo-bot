@@ -10,7 +10,9 @@
   "scripts": {
     "start": "node --no-warnings=ExperimentalWarning src/index.js",
     "check": "node --no-warnings=ExperimentalWarning scripts/check.js",
-    "check:video": "node --no-warnings=ExperimentalWarning scripts/check-video.js"
+    "check:video": "node --no-warnings=ExperimentalWarning scripts/check-video.js",
+    "test:gol": "node --no-warnings=ExperimentalWarning scripts/test-gol.js",
+    "test:escalacao": "node --no-warnings=ExperimentalWarning scripts/test-escalacao.js"
   },
   "dependencies": {},
   "license": "MIT"
